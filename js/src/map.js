@@ -6,8 +6,10 @@ SKY.init = function() {
 	SKY.mapConstants = {
 		background: '#bbb',
 		buildingColor: '#555',
+		buildingHighlight: '#fff',
 		roadColor: '#999',
 		roadWidth: 6,
+		screenBackground: '#345',
 		width: SKY.map.node.clientWidth,
 		tileWidth: SKY.map.node.clientWidth / 10
 	};
@@ -55,52 +57,72 @@ SKY.mapUtils.drawRoads = function() {
 	}
 };
 
-SKY.mapUtils.checkCircles = function(x, y) {
-	for (var i = 0; i < SKY.mapData.circles.length; i++) {
-		if ( 
-			( x === SKY.mapData.circles[i].x || x === SKY.mapData.circles[i].x - 1 ) &&
-			( y === SKY.mapData.circles[i].y || y === SKY.mapData.circles[i].y - 1 )
-		) {
-			return false;
-		}
+SKY.mapUtils.findUnusedTile = function() {
+
+	var row = _.random(0, 9),
+		col = _.random(0, 9);
+
+	if ( SKY.mapData.tiles[row][col] === true ) {
+		return SKY.mapUtils.findUnusedTile();
 	}
-	return true;
+
+	SKY.mapData.tiles[row][col] = true;
+	return { x: row, y: col };
 };
 
-SKY.mapUtils.checkBuildings = function(x, y) {
-	for (var i = 0; i < SKY.mapData.buildings.length; i++) {
-		if ( x === SKY.mapData.buildings[i].x && y === SKY.mapData.buildings[i].y ) {
-			return false;
-		}
-	}
-	return true;
-};
+SKY.mapUtils.drawBuilding = function(coord) {
+	SKY.map.rect( coord.x * SKY.mapConstants.tileWidth + 12, coord.y * SKY.mapConstants.tileWidth + 12, SKY.mapConstants.tileWidth - 24, SKY.mapConstants.tileWidth - 24 ).attr({
+		fill: SKY.mapConstants.buildingColor,
+		stroke: SKY.mapConstants.buildingColor,
+		strokeWidth: 4
+	}).mouseover(function(){
+		this.attr({
+			stroke: SKY.mapConstants.buildingHighlight
+		});
+	}).mouseout(function(){
+		this.attr({
+			stroke: SKY.mapConstants.buildingColor
+		});
+	}).click(function(e){
+		this.attr({ 
+			fill: SKY.mapConstants.buildingHighlight,
+			stroke: SKY.mapConstants.buildingHighlight
+		});
 
-SKY.mapUtils.drawBuilding = function(x, y) {
-	SKY.map.rect( x * SKY.mapConstants.tileWidth + 10, y * SKY.mapConstants.tileWidth + 10, SKY.mapConstants.tileWidth - 20, SKY.mapConstants.tileWidth - 20 ).attr({
-		fill: SKY.mapConstants.buildingColor
+		var x = Math.floor( e.offsetX / SKY.mapConstants.tileWidth ),
+			y = Math.floor( e.offsetY / SKY.mapConstants.tileWidth );
+
+		for (var i = 0; i < SKY.mapData.buildings.length; i++) {
+			if ( Math.abs( SKY.mapData.buildings[i].x - x ) === 1 && SKY.mapData.buildings[i].y - y === 0 ) {
+				console.log('can build skyway east or west');
+			}
+			if ( Math.abs( SKY.mapData.buildings[i].y - y ) === 1 && SKY.mapData.buildings[i].x - x === 0 ) {
+				console.log('can build skyway north or south');
+			}
+		}
+
 	});
 };
 
 SKY.mapUtils.drawBuildings = function(i) {
+
 	for (var j = 0; j < i; j++) {
-		// Make sure that we're not in the tile of another building,
-		// not next to a circle
-		var x = Math.floor( Math.random() * 10 ),
-			y = Math.floor( Math.random() * 10 );
-		if ( SKY.mapUtils.checkCircles(x, y) && SKY.mapUtils.checkBuildings(x, y) ) {
-			SKY.mapUtils.drawBuilding( x, y );
-		} else {
-			SKY.mapUtils.drawBuilding( Math.floor( Math.random() * 10 ), Math.floor( Math.random() * 10 ) );
-		}
-		SKY.mapData.buildings.push({
-			x: x,
-			y: y
-		});
+
+		var coord = SKY.mapUtils.findUnusedTile();
+		
+		SKY.mapUtils.drawBuilding( coord );
+
+		SKY.mapData.buildings.push( coord );
+
+		SKY.mapData.tiles[coord.x][coord.y] = true;
 	}
+
 };
 
 SKY.mapUtils.drawMap = function() {
+
+	// Set background color of screen
+	document.documentElement.style.background = SKY.mapConstants.screenBackground;
 
 	// Set background color of the map
 	SKY.map.node.style.backgroundColor = SKY.mapConstants.background;
@@ -108,20 +130,26 @@ SKY.mapUtils.drawMap = function() {
 	// draw roads
 	SKY.mapUtils.drawRoads();
 
-	SKY.mapData.unused = [];
+	// Because the outermost tiles don't get roads on them, add a border to the edge
+	// of the map equal to 1/2 of the road width, the color of the screen background
+	SKY.map.rect( 0, 0, SKY.mapConstants.width, SKY.mapConstants.width ).attr({
+		fill: 'transparent',
+		stroke: SKY.mapConstants.screenBackground,
+		strokeWidth: SKY.mapConstants.roadWidth / 2
+	});
+
+	SKY.mapData.tiles = [];
 	for (var x = 0; x < 10; x++) {
+		SKY.mapData.tiles.push([]);
 		for (var y = 0; y < 10; y++) {
-			SKY.mapData.unused.push({
-				x: x,
-				y: y
-			});
+			SKY.mapData.tiles[x].push(false);
 		}
 	}
 
 	// draw two pseudo-random circles
 	var circles = [
-		[ Math.ceil( Math.random() * 5 ), Math.ceil( Math.random() * 5 ) ],
-		[ Math.ceil( ( Math.random() ) * 5 ) + 4, Math.ceil( Math.random() * 5 ) + 4 ]
+		[ _.random(1, 5), _.random(1, 5) ],
+		[ _.random(6, 9), _.random(6, 9) ]
 	];
 	SKY.mapUtils.drawCircle( circles[0][0], circles[0][1] );
 	SKY.mapUtils.drawCircle( circles[1][0], circles[1][1] );
@@ -135,7 +163,15 @@ SKY.mapUtils.drawMap = function() {
 			y: circles[1][1]
 		}
 	];
+	SKY.mapData.tiles[circles[0][0]][circles[0][1]] = true;
+	SKY.mapData.tiles[circles[1][0]][circles[1][1]] = true;
+	SKY.mapData.tiles[circles[0][0] - 1][circles[0][1]] = true;
+	SKY.mapData.tiles[circles[1][0] - 1][circles[1][1]] = true;
+	SKY.mapData.tiles[circles[0][0]][circles[0][1] - 1] = true;
+	SKY.mapData.tiles[circles[1][0]][circles[1][1] - 1] = true;
+	SKY.mapData.tiles[circles[0][0] - 1][circles[0][1] - 1] = true;
+	SKY.mapData.tiles[circles[1][0] - 1][circles[1][1] - 1] = true;
 
 	SKY.mapData.buildings = [];
-	SKY.mapUtils.drawBuildings( 30 );
+	SKY.mapUtils.drawBuildings( 40 );
 };
