@@ -7,11 +7,21 @@ SKY.init = function() {
 		background: '#bbb',
 		buildingColor: '#555',
 		buildingHighlight: '#fff',
+		buildingInset: 6,
 		roadColor: '#999',
-		roadWidth: 6,
+		roadWidth: 8,
+		skywayColor: '#282828',
+		skywayWidth: 6,
 		screenBackground: '#345',
 		width: SKY.map.node.clientWidth,
 		tileWidth: SKY.map.node.clientWidth / 10
+	};
+
+	SKY.cardinals = {
+		n: { x:  0, y: -1 },
+		e: { x:  1, y:  0 },
+		s: { x:  0, y:  1 },
+		w: { x: -1, y:  0 }
 	};
 
 	// Draw the map
@@ -71,34 +81,92 @@ SKY.mapUtils.findUnusedTile = function() {
 };
 
 SKY.mapUtils.drawBuilding = function(coord) {
-	SKY.map.rect( coord.x * SKY.mapConstants.tileWidth + 12, coord.y * SKY.mapConstants.tileWidth + 12, SKY.mapConstants.tileWidth - 24, SKY.mapConstants.tileWidth - 24 ).attr({
+	return SKY.map.rect( 
+
+		coord.x * SKY.mapConstants.tileWidth + SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset,
+		coord.y * SKY.mapConstants.tileWidth + SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset,
+		SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth * 2 - SKY.mapConstants.buildingInset * 2,
+		SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth * 2 - SKY.mapConstants.buildingInset * 2
+
+	).attr({
+
 		fill: SKY.mapConstants.buildingColor,
 		stroke: SKY.mapConstants.buildingColor,
 		strokeWidth: 4
+
 	}).mouseover(function(){
+
 		this.attr({
 			stroke: SKY.mapConstants.buildingHighlight
 		});
+
 	}).mouseout(function(){
+
 		this.attr({
 			stroke: SKY.mapConstants.buildingColor
 		});
-	}).click(function(e){
+
+	}).mousedown(function(){
+
 		this.attr({ 
 			fill: SKY.mapConstants.buildingHighlight,
 			stroke: SKY.mapConstants.buildingHighlight
 		});
 
+	}).mouseup(function(){
+
+		this.attr({ 
+			fill: SKY.mapConstants.buildingColor,
+			stroke: SKY.mapConstants.buildingColor
+		});
+
+	}).click(function(e){
+
 		var x = Math.floor( e.offsetX / SKY.mapConstants.tileWidth ),
 			y = Math.floor( e.offsetY / SKY.mapConstants.tileWidth );
 
-		for (var i = 0; i < SKY.mapData.buildings.length; i++) {
-			if ( Math.abs( SKY.mapData.buildings[i].x - x ) === 1 && SKY.mapData.buildings[i].y - y === 0 ) {
-				console.log('can build skyway east or west');
+		for ( var i = 0; i < SKY.mapData.buildings.length; i++ ) {
+
+			for ( var cardinal in SKY.cardinals ) {
+				
+				// Can we build a skyway?
+				if ( SKY.mapData.buildings[i].x - x === SKY.cardinals[cardinal].x && SKY.mapData.buildings[i].y - y === SKY.cardinals[cardinal].y ) {
+					console.log('can build skyway ' + cardinal);
+					var skyway;
+
+					// If yes, which direction?
+					if ( cardinal === 'n' || cardinal === 's' ) {
+
+						skyway = SKY.map.rect( 
+
+							x * SKY.mapConstants.tileWidth + SKY.mapConstants.tileWidth / 2 - SKY.mapConstants.skywayWidth / 2, 
+							y * SKY.mapConstants.tileWidth + ( ( SKY.cardinals[cardinal].y + 1 ) / 2 ) * SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth / 2 - SKY.mapConstants.buildingInset, 
+							SKY.mapConstants.skywayWidth, 
+							SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset * 2
+
+						);
+
+					} else {
+
+						skyway = SKY.map.rect( 
+
+							x * SKY.mapConstants.tileWidth + ( ( SKY.cardinals[cardinal].x + 1 ) / 2 ) * SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth / 2 - SKY.mapConstants.buildingInset, 
+							y * SKY.mapConstants.tileWidth + SKY.mapConstants.tileWidth / 2 - SKY.mapConstants.skywayWidth / 2, 
+							SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset * 2,
+							SKY.mapConstants.skywayWidth
+
+						);
+
+					}
+
+					skyway.attr({	
+						fill: SKY.mapConstants.skywayColor
+					});
+
+				}
+
 			}
-			if ( Math.abs( SKY.mapData.buildings[i].y - y ) === 1 && SKY.mapData.buildings[i].x - x === 0 ) {
-				console.log('can build skyway north or south');
-			}
+
 		}
 
 	});
@@ -110,7 +178,8 @@ SKY.mapUtils.drawBuildings = function(i) {
 
 		var coord = SKY.mapUtils.findUnusedTile();
 		
-		SKY.mapUtils.drawBuilding( coord );
+		var path = SKY.mapUtils.drawBuilding( coord );
+		coord.path = path;
 
 		SKY.mapData.buildings.push( coord );
 
