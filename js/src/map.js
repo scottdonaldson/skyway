@@ -1,9 +1,15 @@
+/*!
+ *
+ *	Map constants, data, and utilities
+ *
+ */
+
 (function() {
 
-// This will be a shortcut to SKY.mapConstants
-var c;
+// These will be shortcuts to SKY.mapConstants, SKY.mapData, and SKY.mapUtilities (respectively)
+var c, d, u;
 
-// Initializing function
+// Initializing function. Called from index.html
 SKY.init = function() {
 	
 	// Define the map and constants
@@ -42,10 +48,14 @@ SKY.init = function() {
 
 // Empty objects for utility functions and map data
 SKY.mapUtils = {};
+u = SKY.mapUtils;
+
 SKY.mapData = {
 	buildings: [],
-	circles: []
+	circles: [],
+	tiles: []
 };
+d = SKY.mapData;
 
 SKY.mapUtils.drawRoad = function(x1, y1, x2, y2) {
 
@@ -70,11 +80,11 @@ SKY.mapUtils.drawRoads = function() {
 	}
 
 	for ( var j in points.x ) {
-		SKY.mapUtils.drawRoad( points.x[j], 0, points.x[j], c.width );
+		u.drawRoad( points.x[j], 0, points.x[j], c.width );
 	}
 
 	for ( var k in points.y ) {
-		SKY.mapUtils.drawRoad( 0, points.y[k], c.width, points.y[k] );
+		u.drawRoad( 0, points.y[k], c.width, points.y[k] );
 	}
 
 };
@@ -87,15 +97,15 @@ SKY.mapUtils.drawCircle = function(x, y) {
 		strokeWidth: c.roadWidth
 	});
 
-	SKY.mapData.circles.push({
+	d.circles.push({
 		x: x,
 		y: y
 	});
 
-	SKY.mapData.tiles[x][y] = true;
-	SKY.mapData.tiles[x - 1][y] = true;
-	SKY.mapData.tiles[x][y - 1] = true;
-	SKY.mapData.tiles[x - 1][y - 1] = true;
+	d.tiles[x][y] = true;
+	d.tiles[x - 1][y] = true;
+	d.tiles[x][y - 1] = true;
+	d.tiles[x - 1][y - 1] = true;
 
 };
 
@@ -104,9 +114,9 @@ SKY.mapUtils.findUnusedTile = function() {
 	var row = _.random(0, 9),
 		col = _.random(0, 9);
 
-	if ( SKY.mapData.tiles[row][col] === true ) {
+	if ( d.tiles[row][col] === true ) {
 
-		return SKY.mapUtils.findUnusedTile();
+		return u.findUnusedTile();
 
 	}
 
@@ -159,12 +169,12 @@ SKY.mapUtils.drawBuilding = function(coord) {
 		var x = Math.floor( e.offsetX / c.tileWidth ),
 			y = Math.floor( e.offsetY / c.tileWidth );
 
-		for ( var i = 0; i < SKY.mapData.buildings.length; i++ ) {
+		for ( var i = 0; i < d.buildings.length; i++ ) {
 
 			for ( var cardinal in c.cardinals ) {
 				
 				// Can we build a skyway?
-				if ( SKY.mapData.buildings[i].x - x === c.cardinals[cardinal].x && SKY.mapData.buildings[i].y - y === c.cardinals[cardinal].y ) {
+				if ( d.buildings[i].x - x === c.cardinals[cardinal].x && d.buildings[i].y - y === c.cardinals[cardinal].y ) {
 					
 					var skyway;
 
@@ -211,19 +221,19 @@ SKY.mapUtils.drawBuildings = function(i) {
 
 	for (var j = 0; j < i; j++) {
 
-		var coord = SKY.mapUtils.findUnusedTile();
+		var coord = u.findUnusedTile();
 		
-		var path = SKY.mapUtils.drawBuilding( coord );
+		var path = u.drawBuilding( coord );
 
 		// add the path to the coord object
 		coord.path = path;
 
 		// then add it to the mapData.buildings array
 		// so we can refer to this later
-		SKY.mapData.buildings.push( coord );
+		d.buildings.push( coord );
 
 		// This tile is now booked
-		SKY.mapData.tiles[coord.x][coord.y] = true;
+		d.tiles[coord.x][coord.y] = true;
 	}
 
 };
@@ -241,7 +251,7 @@ SKY.mapUtils.drawMap = function() {
 	SKY.map.node.style.backgroundColor = c.background;
 
 	// draw roads
-	SKY.mapUtils.drawRoads();
+	u.drawRoads();
 
 	// Because the outermost tiles don't get roads on them, add a border to the edge
 	// of the map equal to 1/2 of the road width, the color of the screen background
@@ -254,11 +264,10 @@ SKY.mapUtils.drawMap = function() {
 	// Tiles is an array of arrays s.t. [0][0] = (0, 0)
 	// the value is false if empty (all empty at start)
 	// and true if there's something in this tile
-	SKY.mapData.tiles = [];
 	for (var x = 0; x < 10; x++) {
-		SKY.mapData.tiles.push([]);
+		d.tiles.push([]);
 		for (var y = 0; y < 10; y++) {
-			SKY.mapData.tiles[x].push(false);
+			d.tiles[x].push(false);
 		}
 	}
 
@@ -267,10 +276,10 @@ SKY.mapUtils.drawMap = function() {
 		[ _.random(1, 5), _.random(1, 5) ],
 		[ _.random(6, 9), _.random(6, 9) ]
 	];
-	SKY.mapUtils.drawCircle( circles[0][0], circles[0][1] );
-	SKY.mapUtils.drawCircle( circles[1][0], circles[1][1] );
+	u.drawCircle( circles[0][0], circles[0][1] );
+	u.drawCircle( circles[1][0], circles[1][1] );
 
 	// draw 40 buildings
-	SKY.mapUtils.drawBuildings( 40 );
+	u.drawBuildings( 40 );
 };
 }());

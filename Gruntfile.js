@@ -14,7 +14,7 @@ module.exports = function(grunt) {
         uglify: {
             build: {
                 files: {
-                    'js/min/core.min.js': ['js/vendor/snap.js', 'js/vendor/underscore.js', 'js/core.js', 'js/src/**/*.js']                   
+                    'js/min/core.min.js': ['js/vendor/snap.js', 'js/vendor/underscore.js', 'js/src/**/*.js']                   
                 }
             }
         },

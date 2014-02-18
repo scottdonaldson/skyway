@@ -7,7 +7,19 @@
 	position: relative;
 }
 
+body {
+	padding-bottom: 60px; // for fixed toolbar
+}
+
+// Dimensions, colors, etc. of map defined in JS
 #map {
 	display: block;
 	margin: 40px auto;
+}
+
+#toolbar {
+	bottom: 0;
+	left: 0;
+	position: fixed;
+	width: 100%;
 }
