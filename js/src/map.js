@@ -1,3 +1,9 @@
+(function() {
+
+// This will be a shortcut to SKY.mapConstants
+var c;
+
+// Initializing function
 SKY.init = function() {
 	
 	// Define the map and constants
@@ -6,18 +12,24 @@ SKY.init = function() {
 	SKY.mapConstants = {
 		background: '#bbb',
 		buildingColor: '#555',
-		buildingHighlight: '#fff',
-		buildingInset: 6,
+		buildingHighlight: '#ddd',
 		roadColor: '#999',
-		roadWidth: 8,
-		skywayColor: '#282828',
-		skywayWidth: 6,
+		skywayColor: '#333',
 		screenBackground: '#345',
-		width: SKY.map.node.clientWidth,
-		tileWidth: SKY.map.node.clientWidth / 10
+		width: 500
 	};
 
-	SKY.cardinals = {
+	// map c to make things easier when we refer to constants
+	c = SKY.mapConstants;
+
+	c.tileWidth = c.width / 10;
+	c.roadWidth = c.width / 75;
+	c.skywayWidth = c.roadWidth * 0.75;
+	c.buildingInset = c.roadWidth * 0.6;
+	c.buildingStroke = c.buildingInset * 0.5;
+
+	// Cardinal directions
+	c.cardinals = {
 		n: { x:  0, y: -1 },
 		e: { x:  1, y:  0 },
 		s: { x:  0, y:  1 },
@@ -28,22 +40,20 @@ SKY.init = function() {
 	SKY.mapUtils.drawMap();
 };
 
+// Empty objects for utility functions and map data
 SKY.mapUtils = {};
-SKY.mapData = {};
-
-SKY.mapUtils.drawRoad = function(x1, y1, x2, y2) {
-	SKY.map.line(x1, y1, x2, y2).attr({
-		stroke: SKY.mapConstants.roadColor,
-		strokeWidth: SKY.mapConstants.roadWidth
-	});
+SKY.mapData = {
+	buildings: [],
+	circles: []
 };
 
-SKY.mapUtils.drawCircle = function(x, y) {
-	SKY.map.circle( x * SKY.mapConstants.tileWidth, y * SKY.mapConstants.tileWidth, SKY.mapConstants.tileWidth / 2 ).attr({
-		fill: SKY.mapConstants.background,
-		stroke: SKY.mapConstants.roadColor,
-		strokeWidth: SKY.mapConstants.roadWidth
+SKY.mapUtils.drawRoad = function(x1, y1, x2, y2) {
+
+	SKY.map.line(x1, y1, x2, y2).attr({
+		stroke: c.roadColor,
+		strokeWidth: c.roadWidth
 	});
+
 };
 
 SKY.mapUtils.drawRoads = function() {
@@ -55,16 +65,38 @@ SKY.mapUtils.drawRoads = function() {
 
 	for ( var i = 1; i < 10; i++ ) {
 		[ points.x, points.y ].forEach(function( el ) {
-			el.push( i * SKY.mapConstants.tileWidth );
+			el.push( i * c.tileWidth );
 		});
 	}
 
 	for ( var j in points.x ) {
-		SKY.mapUtils.drawRoad( points.x[j], 0, points.x[j], SKY.mapConstants.width );
+		SKY.mapUtils.drawRoad( points.x[j], 0, points.x[j], c.width );
 	}
+
 	for ( var k in points.y ) {
-		SKY.mapUtils.drawRoad( 0, points.y[k], SKY.mapConstants.width, points.y[k] );
+		SKY.mapUtils.drawRoad( 0, points.y[k], c.width, points.y[k] );
 	}
+
+};
+
+SKY.mapUtils.drawCircle = function(x, y) {
+
+	SKY.map.circle( x * c.tileWidth, y * c.tileWidth, c.tileWidth / 2 ).attr({
+		fill: c.background,
+		stroke: c.roadColor,
+		strokeWidth: c.roadWidth
+	});
+
+	SKY.mapData.circles.push({
+		x: x,
+		y: y
+	});
+
+	SKY.mapData.tiles[x][y] = true;
+	SKY.mapData.tiles[x - 1][y] = true;
+	SKY.mapData.tiles[x][y - 1] = true;
+	SKY.mapData.tiles[x - 1][y - 1] = true;
+
 };
 
 SKY.mapUtils.findUnusedTile = function() {
@@ -73,65 +105,67 @@ SKY.mapUtils.findUnusedTile = function() {
 		col = _.random(0, 9);
 
 	if ( SKY.mapData.tiles[row][col] === true ) {
+
 		return SKY.mapUtils.findUnusedTile();
+
 	}
 
-	SKY.mapData.tiles[row][col] = true;
 	return { x: row, y: col };
 };
 
 SKY.mapUtils.drawBuilding = function(coord) {
+
 	return SKY.map.rect( 
 
-		coord.x * SKY.mapConstants.tileWidth + SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset,
-		coord.y * SKY.mapConstants.tileWidth + SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset,
-		SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth * 2 - SKY.mapConstants.buildingInset * 2,
-		SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth * 2 - SKY.mapConstants.buildingInset * 2
+		coord.x * c.tileWidth + c.roadWidth / 2 + c.buildingInset + c.buildingStroke / 2,
+		coord.y * c.tileWidth + c.roadWidth / 2 + c.buildingInset + c.buildingStroke / 2,
+		c.tileWidth - c.roadWidth - c.buildingInset * 2 - c.buildingStroke,
+		c.tileWidth - c.roadWidth - c.buildingInset * 2 - c.buildingStroke
 
 	).attr({
 
-		fill: SKY.mapConstants.buildingColor,
-		stroke: SKY.mapConstants.buildingColor,
-		strokeWidth: 4
+		fill: c.buildingColor,
+		stroke: c.buildingColor,
+		strokeWidth: c.buildingStroke
 
 	}).mouseover(function(){
 
 		this.attr({
-			stroke: SKY.mapConstants.buildingHighlight
+			stroke: c.buildingHighlight
 		});
 
 	}).mouseout(function(){
 
 		this.attr({
-			stroke: SKY.mapConstants.buildingColor
+			stroke: c.buildingColor
 		});
 
 	}).mousedown(function(){
 
 		this.attr({ 
-			fill: SKY.mapConstants.buildingHighlight,
-			stroke: SKY.mapConstants.buildingHighlight
+			fill: c.buildingHighlight,
+			stroke: c.buildingHighlight
 		});
 
 	}).mouseup(function(){
 
 		this.attr({ 
-			fill: SKY.mapConstants.buildingColor,
-			stroke: SKY.mapConstants.buildingColor
+			fill: c.buildingColor,
+			stroke: c.buildingColor
 		});
 
 	}).click(function(e){
 
-		var x = Math.floor( e.offsetX / SKY.mapConstants.tileWidth ),
-			y = Math.floor( e.offsetY / SKY.mapConstants.tileWidth );
+		var x = Math.floor( e.offsetX / c.tileWidth ),
+			y = Math.floor( e.offsetY / c.tileWidth );
 
 		for ( var i = 0; i < SKY.mapData.buildings.length; i++ ) {
 
-			for ( var cardinal in SKY.cardinals ) {
+			for ( var cardinal in c.cardinals ) {
 				
 				// Can we build a skyway?
-				if ( SKY.mapData.buildings[i].x - x === SKY.cardinals[cardinal].x && SKY.mapData.buildings[i].y - y === SKY.cardinals[cardinal].y ) {
-					console.log('can build skyway ' + cardinal);
+				if ( SKY.mapData.buildings[i].x - x === c.cardinals[cardinal].x && SKY.mapData.buildings[i].y - y === c.cardinals[cardinal].y ) {
+					
 					var skyway;
 
 					// If yes, which direction?
@@ -139,10 +173,10 @@ SKY.mapUtils.drawBuilding = function(coord) {
 
 						skyway = SKY.map.rect( 
 
-							x * SKY.mapConstants.tileWidth + SKY.mapConstants.tileWidth / 2 - SKY.mapConstants.skywayWidth / 2, 
-							y * SKY.mapConstants.tileWidth + ( ( SKY.cardinals[cardinal].y + 1 ) / 2 ) * SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth / 2 - SKY.mapConstants.buildingInset, 
-							SKY.mapConstants.skywayWidth, 
-							SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset * 2
+							x * c.tileWidth + c.tileWidth / 2 - c.skywayWidth / 2, 
+							y * c.tileWidth + ( ( c.cardinals[cardinal].y + 1 ) / 2 ) * c.tileWidth - c.roadWidth / 2 - c.buildingInset, 
+							c.skywayWidth, 
+							c.roadWidth + c.buildingInset * 2
 
 						);
 
@@ -150,17 +184,17 @@ SKY.mapUtils.drawBuilding = function(coord) {
 
 						skyway = SKY.map.rect( 
 
-							x * SKY.mapConstants.tileWidth + ( ( SKY.cardinals[cardinal].x + 1 ) / 2 ) * SKY.mapConstants.tileWidth - SKY.mapConstants.roadWidth / 2 - SKY.mapConstants.buildingInset, 
-							y * SKY.mapConstants.tileWidth + SKY.mapConstants.tileWidth / 2 - SKY.mapConstants.skywayWidth / 2, 
-							SKY.mapConstants.roadWidth + SKY.mapConstants.buildingInset * 2,
-							SKY.mapConstants.skywayWidth
+							x * c.tileWidth + ( ( c.cardinals[cardinal].x + 1 ) / 2 ) * c.tileWidth - c.roadWidth / 2 - c.buildingInset, 
+							y * c.tileWidth + c.tileWidth / 2 - c.skywayWidth / 2, 
+							c.roadWidth + c.buildingInset * 2,
+							c.skywayWidth
 
 						);
 
 					}
 
 					skyway.attr({	
-						fill: SKY.mapConstants.skywayColor
+						fill: c.skywayColor
 					});
 
 				}
@@ -172,6 +206,7 @@ SKY.mapUtils.drawBuilding = function(coord) {
 	});
 };
 
+// function to draw i random buildings
 SKY.mapUtils.drawBuildings = function(i) {
 
 	for (var j = 0; j < i; j++) {
@@ -179,10 +214,15 @@ SKY.mapUtils.drawBuildings = function(i) {
 		var coord = SKY.mapUtils.findUnusedTile();
 		
 		var path = SKY.mapUtils.drawBuilding( coord );
+
+		// add the path to the coord object
 		coord.path = path;
 
+		// then add it to the mapData.buildings array
+		// so we can refer to this later
 		SKY.mapData.buildings.push( coord );
 
+		// This tile is now booked
 		SKY.mapData.tiles[coord.x][coord.y] = true;
 	}
 
@@ -191,22 +231,29 @@ SKY.mapUtils.drawBuildings = function(i) {
 SKY.mapUtils.drawMap = function() {
 
 	// Set background color of screen
-	document.documentElement.style.background = SKY.mapConstants.screenBackground;
+	document.documentElement.style.background = c.screenBackground;
+
+	// Set height and width of the map
+	SKY.map.node.style.width = c.width + 'px';
+	SKY.map.node.style.height = c.width + 'px';	
 
 	// Set background color of the map
-	SKY.map.node.style.backgroundColor = SKY.mapConstants.background;
+	SKY.map.node.style.backgroundColor = c.background;
 
 	// draw roads
 	SKY.mapUtils.drawRoads();
 
 	// Because the outermost tiles don't get roads on them, add a border to the edge
 	// of the map equal to 1/2 of the road width, the color of the screen background
-	SKY.map.rect( 0, 0, SKY.mapConstants.width, SKY.mapConstants.width ).attr({
+	SKY.map.rect( 0, 0, c.width, c.width ).attr({
 		fill: 'transparent',
-		stroke: SKY.mapConstants.screenBackground,
-		strokeWidth: SKY.mapConstants.roadWidth / 2
+		stroke: c.screenBackground,
+		strokeWidth: c.roadWidth
 	});
 
+	// Tiles is an array of arrays s.t. [0][0] = (0, 0)
+	// the value is false if empty (all empty at start)
+	// and true if there's something in this tile
 	SKY.mapData.tiles = [];
 	for (var x = 0; x < 10; x++) {
 		SKY.mapData.tiles.push([]);
@@ -222,25 +269,8 @@ SKY.mapUtils.drawMap = function() {
 	];
 	SKY.mapUtils.drawCircle( circles[0][0], circles[0][1] );
 	SKY.mapUtils.drawCircle( circles[1][0], circles[1][1] );
-	SKY.mapData.circles = [
-		{
-			x: circles[0][0],
-			y: circles[0][1]
-		},
-		{
-			x: circles[1][0],
-			y: circles[1][1]
-		}
-	];
-	SKY.mapData.tiles[circles[0][0]][circles[0][1]] = true;
-	SKY.mapData.tiles[circles[1][0]][circles[1][1]] = true;
-	SKY.mapData.tiles[circles[0][0] - 1][circles[0][1]] = true;
-	SKY.mapData.tiles[circles[1][0] - 1][circles[1][1]] = true;
-	SKY.mapData.tiles[circles[0][0]][circles[0][1] - 1] = true;
-	SKY.mapData.tiles[circles[1][0]][circles[1][1] - 1] = true;
-	SKY.mapData.tiles[circles[0][0] - 1][circles[0][1] - 1] = true;
-	SKY.mapData.tiles[circles[1][0] - 1][circles[1][1] - 1] = true;
 
-	SKY.mapData.buildings = [];
+	// draw 40 buildings
 	SKY.mapUtils.drawBuildings( 40 );
 };
+}());
